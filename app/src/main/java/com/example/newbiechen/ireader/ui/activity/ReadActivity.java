@@ -23,6 +23,7 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -49,10 +50,18 @@ import com.example.newbiechen.ireader.utils.RxUtils;
 import com.example.newbiechen.ireader.utils.ScreenUtils;
 import com.example.newbiechen.ireader.utils.StringUtils;
 import com.example.newbiechen.ireader.utils.SystemBarUtils;
+import com.example.newbiechen.ireader.utils.ToastUtils;
 import com.example.newbiechen.ireader.widget.page.PageLoader;
 import com.example.newbiechen.ireader.widget.page.PageView;
 import com.example.newbiechen.ireader.widget.page.TxtChapter;
+import com.qq.e.ads.cfg.VideoOption;
+import com.qq.e.ads.nativ.NativeExpressAD;
+import com.qq.e.ads.nativ.NativeExpressADView;
+import com.qq.e.comm.util.AdError;
 
+import org.json.JSONObject;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
@@ -285,7 +294,36 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
 
         //初始化BottomMenu
         initBottomMenu();
+
+
+        View coverPageView = LayoutInflater.from(this).inflate(R.layout.layout_ad_view, null, false);
+        coverPageView.findViewById(R.id.bt).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ToastUtils.show("点击了按钮");
+            }
+        });
+        mAdView= LayoutInflater.from(this).inflate(R.layout.layout_ad_view2, null, false);
+        mPvPage.setReaderAdListener(new PageView.ReaderAdListener() {
+            @Override
+            public View getAdView() {
+                return mAdView;
+            }
+
+            @Override
+            public void onRequestAd() {
+
+            }
+
+            @Override
+            public View getCoverPageView() {
+                return coverPageView;
+            }
+        });
     }
+
+    private View mAdView;
+
 
     private void initTopMenu() {
         if (Build.VERSION.SDK_INT >= 19) {
