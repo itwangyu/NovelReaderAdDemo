@@ -2,7 +2,6 @@ package com.example.newbiechen.ireader.widget.animation;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -39,8 +38,8 @@ public abstract class HorizonPageAnim extends PageAnimation{
                            View view, OnPageChangeListener listener) {
         super(w, h, marginWidth, marginHeight, view,listener);
         //创建图片
-        mCurBitmap = Bitmap.createBitmap(mViewWidth, mViewHeight, Bitmap.Config.RGB_565);
-        mNextBitmap = Bitmap.createBitmap(mViewWidth, mViewHeight, Bitmap.Config.RGB_565);
+        mCurBitmap = Bitmap.createBitmap(mViewWidth, mViewHeight, Bitmap.Config.ARGB_8888);
+        mNextBitmap = Bitmap.createBitmap(mViewWidth, mViewHeight, Bitmap.Config.ARGB_8888);
     }
 
     /**
@@ -204,6 +203,13 @@ public abstract class HorizonPageAnim extends PageAnimation{
 
             if (mScroller.getFinalX() == x && mScroller.getFinalY() == y){
                 isRunning = false;
+                if (mScrollAnimListener != null) {
+                    if (isCancel) {
+                        mScrollAnimListener.onCancelAnimEnd();
+                    } else {
+                        mScrollAnimListener.onScrollAnimEnd();
+                    }
+                }
             }
             mView.postInvalidate();
         }
@@ -212,6 +218,9 @@ public abstract class HorizonPageAnim extends PageAnimation{
     @Override
     public void abortAnim() {
         if (!mScroller.isFinished()){
+            if (mScrollAnimListener != null) {
+                mScrollAnimListener.onAnimAbort();
+            }
             mScroller.abortAnimation();
             isRunning = false;
             setTouchPoint(mScroller.getFinalX(),mScroller.getFinalY());
@@ -227,5 +236,20 @@ public abstract class HorizonPageAnim extends PageAnimation{
     @Override
     public Bitmap getNextBitmap() {
         return mNextBitmap;
+    }
+
+    public void setScrollAnimListener(ScrollAnimListener scrollAnimListener) {
+        mScrollAnimListener = scrollAnimListener;
+    }
+
+    ScrollAnimListener mScrollAnimListener;
+
+
+    public interface ScrollAnimListener {
+        void onScrollAnimEnd();
+
+        void onCancelAnimEnd();
+
+        void onAnimAbort();
     }
 }

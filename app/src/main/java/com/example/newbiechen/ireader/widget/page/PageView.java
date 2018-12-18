@@ -5,11 +5,14 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.FrameLayout;
 
 import com.example.newbiechen.ireader.model.bean.CollBookBean;
+import com.example.newbiechen.ireader.utils.UtilsView;
 import com.example.newbiechen.ireader.widget.animation.CoverPageAnim;
 import com.example.newbiechen.ireader.widget.animation.HorizonPageAnim;
 import com.example.newbiechen.ireader.widget.animation.NonePageAnim;
@@ -23,7 +26,7 @@ import com.example.newbiechen.ireader.widget.animation.SlidePageAnim;
  * 原作者的GitHub Project Path:(https://github.com/PeachBlossom/treader)
  * 绘制页面显示内容的类
  */
-public class PageView extends View {
+public class PageView extends FrameLayout {
 
     private final static String TAG = "BookPageWidget";
 
@@ -42,11 +45,13 @@ public class PageView extends View {
     private RectF mCenterRect = null;
     private boolean isPrepare;
     // 动画类
-    private PageAnimation mPageAnim;
+    public PageAnimation mPageAnim;
+    private View mAdView,mCoverPageView;
     // 动画监听类
     private PageAnimation.OnPageChangeListener mPageAnimListener = new PageAnimation.OnPageChangeListener() {
         @Override
         public boolean hasPrev() {
+            //左侧点击上一页
             return PageView.this.hasPrevPage();
         }
 
@@ -76,6 +81,9 @@ public class PageView extends View {
 
     public PageView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        setWillNotDraw(false);
+        //千万不要关闭硬件加速，否则页面渲染会很卡
+        setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
     @Override
@@ -89,6 +97,7 @@ public class PageView extends View {
         if (mPageLoader != null) {
             mPageLoader.prepareDisplay(w, h);
         }
+        postInvalidate();
     }
 
     //设置翻页的模式
@@ -116,6 +125,27 @@ public class PageView extends View {
                 break;
             default:
                 mPageAnim = new SimulationPageAnim(mViewWidth, mViewHeight, this, mPageAnimListener);
+        }
+        if (mPageAnim instanceof HorizonPageAnim) {
+            ((HorizonPageAnim) mPageAnim).setScrollAnimListener(new HorizonPageAnim.ScrollAnimListener() {
+                @Override
+                public void onScrollAnimEnd() {
+//                    if (mPageLoader == null || mPageLoader.mCurPage == null) {
+//                        return;
+//                    }
+//                    addAdLayout();
+                }
+
+                @Override
+                public void onCancelAnimEnd() {
+//                    addAdLayout();
+                }
+
+                @Override
+                public void onAnimAbort() {
+                    drawCurPage(false);
+                }
+            });
         }
     }
 
@@ -190,18 +220,44 @@ public class PageView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-
         //绘制背景
         canvas.drawColor(mBgColor);
-
         //绘制动画
         mPageAnim.draw(canvas);
+    }
+
+    public Bitmap mBitmap;
+    private boolean shouldDraw=true;
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        try {
+            if (mBitmap != null) {
+                canvas = new Canvas(mBitmap);
+//                canvas.drawColor(Color.YELLOW,PorterDuff.Mode.CLEAR);
+            }
+            if (mPageLoader==null||mPageLoader.mCurPage==null) {
+                return;
+            }
+            switch (mPageLoader.mCurPage.pageType) {
+                case TxtPage.VALUE_STRING_COVER_TYPE:
+                    //这里用一个标记位解决透明图片的问题
+                    if (shouldDraw) {
+                        super.dispatchDraw(canvas);
+                        shouldDraw=false;
+                    }
+                    break;
+                case TxtPage.VALUE_STRING_AD_TYPE:
+                    super.dispatchDraw(canvas);
+                    break;
+            }
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         super.onTouchEvent(event);
-
         if (!canTouch && event.getAction() != MotionEvent.ACTION_DOWN) return true;
 
         int x = (int) event.getX();
@@ -211,6 +267,7 @@ public class PageView extends View {
                 mStartX = x;
                 mStartY = y;
                 isMove = false;
+
                 canTouch = mTouchListener.onTouch();
                 mPageAnim.onTouchEvent(event);
                 break;
@@ -220,7 +277,6 @@ public class PageView extends View {
                 if (!isMove) {
                     isMove = Math.abs(mStartX - event.getX()) > slop || Math.abs(mStartY - event.getY()) > slop;
                 }
-
                 // 如果滑动了，则进行翻页。
                 if (isMove) {
                     mPageAnim.onTouchEvent(event);
@@ -228,10 +284,14 @@ public class PageView extends View {
                 break;
             case MotionEvent.ACTION_UP:
                 if (!isMove) {
+                    if (mPageLoader == null || mPageLoader.mCurPage == null) {
+                        return true;
+                    }
+
                     //设置中间区域范围
                     if (mCenterRect == null) {
-                        mCenterRect = new RectF(mViewWidth / 5, mViewHeight / 3,
-                                mViewWidth * 4 / 5, mViewHeight * 2 / 3);
+                        mCenterRect = new RectF(mViewWidth / 4, mViewHeight / 4,
+                                mViewWidth * 3 / 4, mViewHeight * 3 / 4);
                     }
 
                     //是否点击了中间
@@ -255,6 +315,7 @@ public class PageView extends View {
      */
     private boolean hasPrevPage() {
         mTouchListener.prePage();
+        shouldDraw=true;
         return mPageLoader.prev();
     }
 
@@ -265,12 +326,51 @@ public class PageView extends View {
      */
     private boolean hasNextPage() {
         mTouchListener.nextPage();
+        shouldDraw=true;
         return mPageLoader.next();
     }
 
     private void pageCancel() {
         mTouchListener.cancel();
         mPageLoader.pageCancel();
+
+        //翻页取消的时候，如果当前页是广告页，那么就重新添加
+        if (mPageLoader.mCurPage != null && mPageLoader.mCurPage.isCustomView) {
+            addAdLayout();
+        } else {
+            //否则清除
+            cleanAdView();
+        }
+    }
+
+
+
+    private void addAdLayout() {
+        if (mPageLoader==null||mPageLoader.mCurPage==null||!mPageLoader.mCurPage.isCustomView) {
+            return;
+        }
+        switch (mPageLoader.mCurPage.pageType) {
+            case TxtPage.VALUE_STRING_AD_TYPE:
+                if (mAdView != null) {
+                    UtilsView.removeParent(mAdView);
+                    addView(mAdView);
+                }
+                break;
+            case TxtPage.VALUE_STRING_COVER_TYPE:
+                if (mAdView != null) {
+                    UtilsView.removeParent(mCoverPageView);
+                    addView(mCoverPageView);
+                }
+                break;
+        }
+
+    }
+
+    /**
+     * 清除添加的所有view
+     */
+    public void cleanAdView() {
+        removeAllViews();
     }
 
     @Override
@@ -309,31 +409,87 @@ public class PageView extends View {
         mPageLoader.drawPage(getNextBitmap(), false);
     }
 
+    public boolean drawCoverPage(Bitmap bitmap) {
+        if (!isPrepare) return false;
+
+        if (mReaderAdListener == null) {
+            return false;
+        }
+        mBitmap = bitmap;
+        if (mPageLoader.mCurPage.hasDrawAd&&mCoverPageView!=null) {
+            addAdLayout();
+            return true;
+        } else {
+            mCoverPageView = mReaderAdListener.getCoverPageView();
+        }
+
+        if (mCoverPageView == null) {
+            return false;
+        }
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        params.gravity = Gravity.CENTER;
+        mCoverPageView.setLayoutParams(params);
+        addAdLayout();
+        mPageLoader.mCurPage.hasDrawAd = true;
+        return true;
+    }
+
+    public boolean drawAdPage(Bitmap bitmap) {
+        if (!isPrepare) return false;
+
+        if (mReaderAdListener == null) {
+            return false;
+        }
+        mBitmap = bitmap;
+        if (mPageLoader.mCurPage.hasDrawAd&&mAdView!=null) {
+            addAdLayout();
+            return true;
+        } else {
+            mAdView = mReaderAdListener.getAdView();
+            mReaderAdListener.onRequestAd();
+        }
+
+        if (mAdView == null) {
+            return false;
+        }
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        params.gravity = Gravity.CENTER;
+        mAdView.setLayoutParams(params);
+        addAdLayout();
+        mPageLoader.mCurPage.hasDrawAd = true;
+        return true;
+    }
+
     /**
      * 绘制当前页。
      *
      * @param isUpdate
      */
     public void drawCurPage(boolean isUpdate) {
+
         if (!isPrepare) return;
 
-        if (!isUpdate){
+        if (!isUpdate) {
             if (mPageAnim instanceof ScrollPageAnim) {
                 ((ScrollPageAnim) mPageAnim).resetBitmap();
             }
         }
-
         mPageLoader.drawPage(getNextBitmap(), isUpdate);
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        mPageAnim.abortAnim();
-        mPageAnim.clear();
+        try {
+            mPageAnim.abortAnim();
+            mPageAnim.clear();
 
-        mPageLoader = null;
-        mPageAnim = null;
+            mPageLoader = null;
+            mPageAnim = null;
+        } catch (Exception e) {
+
+        }
+
     }
 
     /**
@@ -372,5 +528,19 @@ public class PageView extends View {
         void nextPage();
 
         void cancel();
+    }
+
+    public void setReaderAdListener(ReaderAdListener readerAdListener) {
+        mReaderAdListener = readerAdListener;
+    }
+
+    ReaderAdListener mReaderAdListener;
+
+    public interface ReaderAdListener {
+        View getAdView();
+
+        void onRequestAd();
+
+        View getCoverPageView();
     }
 }

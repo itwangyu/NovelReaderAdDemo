@@ -24,7 +24,6 @@ import com.example.newbiechen.ireader.utils.StringUtils;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,7 +65,7 @@ public abstract class PageLoader {
     // 页面显示类
     private PageView mPageView;
     // 当前显示的页
-    private TxtPage mCurPage;
+    public TxtPage mCurPage;
     // 上一章的页面列表缓存
     private List<TxtPage> mPrePageList;
     // 当前章节的页面列表
@@ -135,6 +134,7 @@ public abstract class PageLoader {
     private int mBatteryLevel;
     //当前页面的背景
     private int mBgColor;
+    boolean isGoNextPage = false;
 
     // 当前章
     protected int mCurChapterPos = 0;
@@ -725,6 +725,9 @@ public abstract class PageLoader {
 
     private void drawBackground(Bitmap bitmap, boolean isUpdate) {
         Canvas canvas = new Canvas(bitmap);
+        if (mCurPage==null) {
+            return;
+        }
         int tipMarginHeight = ScreenUtils.dpToPx(3);
         if (!isUpdate) {
             /****绘制背景****/
@@ -855,6 +858,23 @@ public abstract class PageLoader {
                 top = mMarginHeight - mTextPaint.getFontMetrics().top;
             }
 
+            if (mCurPage != null && mCurPage.isCustomView) {
+                switch (mCurPage.pageType) {
+                    case TxtPage.VALUE_STRING_AD_TYPE:
+                        if (!mPageView.drawAdPage(bitmap)) {
+                            //如果获取广告失败，跳下一页
+                            mCurPage = isGoNextPage ? getNextPage() : getPrevPage();
+                            drawContent(bitmap);
+                        }
+                        break;
+                    case TxtPage.VALUE_STRING_COVER_TYPE:
+                        mPageView.drawCoverPage(bitmap);
+                        break;
+                }
+                return;
+            }
+            mPageView.cleanAdView();
+
             //设置总距离
             int interval = mTextInterval + (int) mTextPaint.getTextSize();
             int para = mTextPara + (int) mTextPaint.getTextSize();
@@ -949,6 +969,7 @@ public abstract class PageLoader {
                 mCancelPage = mCurPage;
                 mCurPage = prevPage;
                 mPageView.drawNextPage();
+                isGoNextPage = false;
                 return true;
             }
         }
@@ -963,6 +984,7 @@ public abstract class PageLoader {
         } else {
             mCurPage = new TxtPage();
         }
+        isGoNextPage = false;
         mPageView.drawNextPage();
         return true;
     }
@@ -1021,6 +1043,7 @@ public abstract class PageLoader {
                 mCancelPage = mCurPage;
                 mCurPage = nextPage;
                 mPageView.drawNextPage();
+                isGoNextPage = true;
                 return true;
             }
         }
@@ -1036,6 +1059,7 @@ public abstract class PageLoader {
         } else {
             mCurPage = new TxtPage();
         }
+        isGoNextPage = true;
         mPageView.drawNextPage();
         return true;
     }
@@ -1233,6 +1257,14 @@ public abstract class PageLoader {
     private List<TxtPage> loadPages(TxtChapter chapter, BufferedReader br) {
         //生成的页面
         List<TxtPage> pages = new ArrayList<>();
+        //添加封皮
+        TxtPage txtPage=new TxtPage();
+        txtPage.isCustomView =true;
+        txtPage.title=chapter.getTitle();
+        txtPage.titleLines=1;
+        txtPage.pageType=TxtPage.VALUE_STRING_COVER_TYPE;
+        pages.add(txtPage);
+
         //使用流的方式加载
         List<String> lines = new ArrayList<>();
         int rHeight = mVisibleHeight;
@@ -1270,6 +1302,9 @@ public abstract class PageLoader {
                         page.lines = new ArrayList<>(lines);
                         page.titleLines = titleLinesCount;
                         pages.add(page);
+
+                        //尝试加入广告page
+                        addAdPage(pages,chapter.getTitle(),titleLinesCount);
                         // 重置Lines
                         lines.clear();
                         rHeight = mVisibleHeight;
@@ -1323,6 +1358,8 @@ public abstract class PageLoader {
                 page.lines = new ArrayList<>(lines);
                 page.titleLines = titleLinesCount;
                 pages.add(page);
+                //尝试加入广告page
+                addAdPage(pages,chapter.getTitle(),titleLinesCount);
                 //重置Lines
                 lines.clear();
             }
@@ -1336,6 +1373,18 @@ public abstract class PageLoader {
         return pages;
     }
 
+    private int mShowAdIntervel=2;
+    private void addAdPage(List<TxtPage> pages,String title,int titleLinesCount) {
+        if (pages.size() % mShowAdIntervel == 0) {
+            TxtPage adPage = new TxtPage();
+            adPage.isCustomView = true;
+            adPage.position = pages.size();
+            adPage.title = title;
+//            adPage.lines = new ArrayList<>(lines);
+            adPage.titleLines = titleLinesCount;
+            pages.add(adPage);
+        }
+    }
 
     /**
      * @return:获取初始显示的页面
