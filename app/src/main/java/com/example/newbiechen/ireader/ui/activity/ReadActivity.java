@@ -54,6 +54,11 @@ import com.example.newbiechen.ireader.utils.ToastUtils;
 import com.example.newbiechen.ireader.widget.page.PageLoader;
 import com.example.newbiechen.ireader.widget.page.PageView;
 import com.example.newbiechen.ireader.widget.page.TxtChapter;
+import com.qq.e.ads.cfg.VideoOption;
+import com.qq.e.ads.nativ.NativeExpressAD;
+import com.qq.e.ads.nativ.NativeExpressADView;
+import com.qq.e.comm.util.AdError;
+
 import java.util.List;
 
 import butterknife.BindView;
@@ -287,10 +292,10 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
         //初始化BottomMenu
         initBottomMenu();
 
-
+        requestAd();
         View coverPageView = LayoutInflater.from(this).inflate(R.layout.layout_cover_view, null, false);
         coverPageView.findViewById(R.id.bt).setOnClickListener(v -> ToastUtils.show("点击了按钮"));
-        mAdView= LayoutInflater.from(this).inflate(R.layout.layout_ad_view, null, false);
+//        mAdView= LayoutInflater.from(this).inflate(R.layout.layout_ad_view, null, false);
         mPvPage.setReaderAdListener(new PageView.ReaderAdListener() {
             @Override
             public View getAdView() {
@@ -299,7 +304,7 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
 
             @Override
             public void onRequestAd() {
-
+                requestAd();
             }
 
             @Override
@@ -311,6 +316,69 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
 
     private View mAdView;
 
+    private void requestAd() {
+        NativeExpressAD nativeAd = new NativeExpressAD(this,
+                new com.qq.e.ads.nativ.ADSize(com.qq.e.ads.nativ.ADSize.FULL_WIDTH, com.qq.e.ads.nativ.ADSize.AUTO_HEIGHT),
+                "1101152570", "7030020348049331", new NativeExpressAD.NativeExpressADListener() {
+            @Override
+            public void onNoAD(AdError adError) {
+                Log.i("wangyu", "noAd:" + adError.getErrorMsg());
+            }
+
+            @Override
+            public void onADLoaded(List<NativeExpressADView> list) {
+                Log.i("wangyu", "loaded");
+                NativeExpressADView nativeExpressADView = list.get(0);
+                nativeExpressADView.render();
+                mAdView = nativeExpressADView;
+            }
+
+            @Override
+            public void onRenderFail(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onRenderSuccess(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADExposure(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADClicked(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADClosed(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADLeftApplication(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADOpenOverlay(NativeExpressADView nativeExpressADView) {
+
+            }
+
+            @Override
+            public void onADCloseOverlay(NativeExpressADView nativeExpressADView) {
+
+            }
+        });
+        nativeAd.setVideoOption(new VideoOption.Builder()
+                .setAutoPlayPolicy(VideoOption.AutoPlayPolicy.ALWAYS) // 设置什么网络环境下可以自动播放视频
+                .setAutoPlayMuted(true) // 设置自动播放视频时，是否静音
+                .build()); // setVideoOption是可选的，开发者可根据需要选择是否配置
+        nativeAd.loadAD(1);//这里的1是指加载广告的数量
+    }
 
     private void initTopMenu() {
         if (Build.VERSION.SDK_INT >= 19) {
@@ -425,8 +493,7 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
                         if (mPageLoader.getPageStatus() == PageLoader.STATUS_LOADING
                                 || mPageLoader.getPageStatus() == PageLoader.STATUS_ERROR) {
                             mSbChapterProgress.setEnabled(false);
-                        }
-                        else {
+                        } else {
                             mSbChapterProgress.setEnabled(true);
                         }
                     }

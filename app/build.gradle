@@ -7,7 +7,7 @@ android {
     defaultConfig {
         applicationId "com.example.newbiechen.ireader"
         minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        targetSdkVersion 19
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -40,7 +40,7 @@ repositories {
 
 dependencies {
 
-//    api files('libs/GDTUnionSDK.4.19.574.min.jar')
+    api files('libs/GDTUnionSDK.4.19.574.min.jar')
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
