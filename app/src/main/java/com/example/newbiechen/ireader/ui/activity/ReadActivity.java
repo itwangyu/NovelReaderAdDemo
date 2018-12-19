@@ -54,14 +54,6 @@ import com.example.newbiechen.ireader.utils.ToastUtils;
 import com.example.newbiechen.ireader.widget.page.PageLoader;
 import com.example.newbiechen.ireader.widget.page.PageView;
 import com.example.newbiechen.ireader.widget.page.TxtChapter;
-import com.qq.e.ads.cfg.VideoOption;
-import com.qq.e.ads.nativ.NativeExpressAD;
-import com.qq.e.ads.nativ.NativeExpressADView;
-import com.qq.e.comm.util.AdError;
-
-import org.json.JSONObject;
-
-import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
@@ -296,14 +288,9 @@ public class ReadActivity extends BaseMVPActivity<ReadContract.Presenter>
         initBottomMenu();
 
 
-        View coverPageView = LayoutInflater.from(this).inflate(R.layout.layout_ad_view, null, false);
-        coverPageView.findViewById(R.id.bt).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ToastUtils.show("点击了按钮");
-            }
-        });
-        mAdView= LayoutInflater.from(this).inflate(R.layout.layout_ad_view2, null, false);
+        View coverPageView = LayoutInflater.from(this).inflate(R.layout.layout_cover_view, null, false);
+        coverPageView.findViewById(R.id.bt).setOnClickListener(v -> ToastUtils.show("点击了按钮"));
+        mAdView= LayoutInflater.from(this).inflate(R.layout.layout_ad_view, null, false);
         mPvPage.setReaderAdListener(new PageView.ReaderAdListener() {
             @Override
             public View getAdView() {

@@ -357,7 +357,7 @@ public class PageView extends FrameLayout {
                 }
                 break;
             case TxtPage.VALUE_STRING_COVER_TYPE:
-                if (mAdView != null) {
+                if (mCoverPageView != null) {
                     UtilsView.removeParent(mCoverPageView);
                     addView(mCoverPageView);
                 }
